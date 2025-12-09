@@ -14,7 +14,7 @@
         /* 팝업창 스타일 */
         .popup-content {
             text-align: center;
-            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            font-family: 'Malgun Gothic', sans-serif;
             min-width: 160px;
         }
         .btn-route {
@@ -30,9 +30,8 @@
             cursor: pointer;
             border: none;
         }
-        .btn-route:hover { background-color: #02b350; }
-
-        /* 이름표(툴팁) 스타일 */
+        
+        /* 학교 이름표 스타일 */
         .school-label {
             background: rgba(255, 255, 255, 0.95);
             border: 1px solid #333;
@@ -43,16 +42,90 @@
             color: #333;
             padding: 3px 6px;
         }
+
+        /* 사용법 안내창 스타일 */
+        #guide-box {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            font-family: 'Malgun Gothic', sans-serif;
+            width: 200px;
+            transition: all 0.3s ease;
+        }
+        
+        #guide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #03C75A;
+            cursor: pointer;
+        }
+
+        #guide-content {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+            display: block;
+        }
+        
+        #guide-box.collapsed #guide-content { display: none; }
+        #guide-box.collapsed { width: auto; }
+
+        /* [추가됨] 하단 저작권 바 스타일 */
+        #footer {
+            position: fixed; /* 화면 하단 고정 */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.9); /* 흰색 배경 (약간 투명) */
+            border-top: 1px solid #ddd;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 12px;
+            font-family: 'Malgun Gothic', sans-serif;
+            color: #555;
+            z-index: 1000; /* 지도보다 위에 오게 */
+        }
+        /* 저작권 문구 강조 */
+        #footer strong {
+            color: #333;
+        }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
 
+<div id="guide-box">
+    <div id="guide-header" onclick="toggleGuide()">
+        <span>📢 이용 안내</span>
+        <span id="toggle-icon">▲</span>
+    </div>
+    <div id="guide-content">
+        1. 지도에서 궁금한<br>
+           <b>학교 마커</b>를 누르세요.<br>
+        2. <b>[길찾기]</b> 버튼을 누르면<br>
+           네이버 지도가 열립니다.<br>
+        3. 실시간 등하교 경로를<br>
+           확인해보세요!
+    </div>
+</div>
+
+<div id="footer">
+    ⓒ 2025 <strong>배곧해솔중 정희택T</strong> 제작
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // 1. 지도 초기화
+    // 1. 지도 초기화 (좌표 수정됨: 37.3598316, 126.7172852)
     var startLat = 37.3598316;
     var startLng = 126.7172852;
     var startName = "배곧해솔중학교";
@@ -72,11 +145,7 @@
         radius: 8
     }).addTo(map);
     
-    circle.bindTooltip(startName, {
-        permanent: true, 
-        direction: 'top',
-        className: 'school-label'
-    }).openTooltip();
+    circle.bindTooltip(startName, { permanent: true, direction: 'top', className: 'school-label' }).openTooltip();
 
     // 3. 고등학교 데이터
     var schools = [
@@ -102,39 +171,35 @@
     // 4. 마커 생성
     schools.forEach(function(school) {
         var marker = L.marker([school.lat, school.lng]).addTo(map);
+        marker.bindTooltip(school.name, { permanent: true, direction: 'top', className: 'school-label', offset: [0, -10] }).openTooltip();
         
-        // (A) 이름표 항상 표시
-        marker.bindTooltip(school.name, {
-            permanent: true,
-            direction: 'top',
-            className: 'school-label',
-            offset: [0, -10]
-        }).openTooltip();
-
-        // (B) 클릭 시 길찾기 버튼
         var popupContent = 
             '<div class="popup-content">' +
                 '<b>' + school.name + '</b><br>' +
                 '<button onclick="openNaverRoute(\'' + school.name + '\', ' + school.lat + ', ' + school.lng + ')" class="btn-route">🚌 길찾기</button>' +
             '</div>';
-
         marker.bindPopup(popupContent);
     });
 
-    // 5. [중요] 네이버 지도 길찾기 URL 연결 함수 (최신 버전)
-    // 이전 버전(v5) 대신 최신 버전(p)으로 변경하여 정확도 향상
+    // 5. 네이버 길찾기 연결 함수
     window.openNaverRoute = function(endName, endLat, endLng) {
-        // 경도(lng), 위도(lat) 순서 주의
         var startCoord = startLng + "," + startLat;
         var endCoord = endLng + "," + endLat;
-        
-        // URL 구조: directions/출발좌표,출발지명/도착좌표,도착지명/-/transit(대중교통)
-        var url = "https://map.naver.com/p/directions/" + 
-                  startCoord + "," + encodeURIComponent(startName) + "/" + 
-                  endCoord + "," + encodeURIComponent(endName) + 
-                  "/-/transit";
-        
+        var url = "https://map.naver.com/p/directions/" + startCoord + "," + encodeURIComponent(startName) + "/" + endCoord + "," + encodeURIComponent(endName) + "/-/transit";
         window.open(url, '_blank');
+    };
+
+    // 안내창 기능
+    window.toggleGuide = function() {
+        var box = document.getElementById('guide-box');
+        var icon = document.getElementById('toggle-icon');
+        if (box.classList.contains('collapsed')) {
+            box.classList.remove('collapsed');
+            icon.innerText = "▲";
+        } else {
+            box.classList.add('collapsed');
+            icon.innerText = "▼";
+        }
     };
 </script>
 
