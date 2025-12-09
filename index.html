@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>배곧해솔중 진학 지도</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body, html { width: 100%; height: 100%; margin: 0; padding: 0; }
+        #map { width: 100%; height: 100%; background: #f0f0f0; }
+        
+        /* 팝업창 스타일 */
+        .popup-content {
+            text-align: center;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            min-width: 160px;
+        }
+        .btn-route {
+            display: inline-block;
+            background-color: #03C75A;
+            color: white !important;
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            margin-top: 5px;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-route:hover { background-color: #02b350; }
+
+        /* 이름표(툴팁) 스타일 */
+        .school-label {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #333;
+            border-radius: 4px;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            padding: 3px 6px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // 1. 지도 초기화
+    var startLat = 37.3598316;
+    var startLng = 126.7172852;
+    var startName = "배곧해솔중학교";
+
+    var map = L.map('map').setView([startLat, startLng], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    // 2. 우리 학교 마커
+    var circle = L.circleMarker([startLat, startLng], {
+        color: 'red',
+        fillColor: '#f03',
+        fillOpacity: 0.8,
+        radius: 8
+    }).addTo(map);
+    
+    circle.bindTooltip(startName, {
+        permanent: true, 
+        direction: 'top',
+        className: 'school-label'
+    }).openTooltip();
+
+    // 3. 고등학교 데이터
+    var schools = [
+        { name: "군자디지털과학고", lat: 37.35016, lng: 126.78543 },
+        { name: "서해고", lat: 37.3605728, lng: 126.723802 },
+        { name: "소래고", lat: 37.437594, lng: 126.794869 },
+        { name: "경기스마트고", lat: 37.3435332, lng: 126.7522747 },
+        { name: "은행고", lat: 37.4432976, lng: 126.8030575 },
+        { name: "장곡고", lat: 37.38028, lng: 126.78221 },
+        { name: "정왕고", lat: 37.3503989, lng: 126.7283268 },
+        { name: "한국조리과학고", lat: 37.458812, lng: 126.833017 },
+        { name: "경기자동차과학고", lat: 37.4135703, lng: 126.8389099 },
+        { name: "함현고", lat: 37.3660809, lng: 126.7384129 },
+        { name: "시흥고", lat: 37.389496, lng: 126.814003 },
+        { name: "군서고", lat: 37.348865, lng: 126.7425603 },
+        { name: "시흥능곡고", lat: 37.37391, lng: 126.812147 },
+        { name: "시흥매화고", lat: 37.4160587, lng: 126.8158993 },
+        { name: "신천고", lat: 37.4351486, lng: 126.7784736 },
+        { name: "배곧고", lat: 37.37402, lng: 126.732523 },
+        { name: "목감고", lat: 37.372212, lng: 126.857465 }
+    ];
+
+    // 4. 마커 생성
+    schools.forEach(function(school) {
+        var marker = L.marker([school.lat, school.lng]).addTo(map);
+        
+        // (A) 이름표 항상 표시
+        marker.bindTooltip(school.name, {
+            permanent: true,
+            direction: 'top',
+            className: 'school-label',
+            offset: [0, -10]
+        }).openTooltip();
+
+        // (B) 클릭 시 길찾기 버튼
+        var popupContent = 
+            '<div class="popup-content">' +
+                '<b>' + school.name + '</b><br>' +
+                '<button onclick="openNaverRoute(\'' + school.name + '\', ' + school.lat + ', ' + school.lng + ')" class="btn-route">🚌 길찾기</button>' +
+            '</div>';
+
+        marker.bindPopup(popupContent);
+    });
+
+    // 5. [중요] 네이버 지도 길찾기 URL 연결 함수 (최신 버전)
+    // 이전 버전(v5) 대신 최신 버전(p)으로 변경하여 정확도 향상
+    window.openNaverRoute = function(endName, endLat, endLng) {
+        // 경도(lng), 위도(lat) 순서 주의
+        var startCoord = startLng + "," + startLat;
+        var endCoord = endLng + "," + endLat;
+        
+        // URL 구조: directions/출발좌표,출발지명/도착좌표,도착지명/-/transit(대중교통)
+        var url = "https://map.naver.com/p/directions/" + 
+                  startCoord + "," + encodeURIComponent(startName) + "/" + 
+                  endCoord + "," + encodeURIComponent(endName) + 
+                  "/-/transit";
+        
+        window.open(url, '_blank');
+    };
+</script>
+
+</body>
+</html>
